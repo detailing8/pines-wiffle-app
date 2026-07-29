@@ -733,6 +733,17 @@
   }
 
   // ── PeerJS cross-device live sync ────────────────────────────────────────────
+  // Public TURN relay (Open Relay Project) on port 443, so the connection
+  // still works on cellular/locked-down networks that block plain UDP.
+  const PEER_ICE_CONFIG = {
+    iceServers: [
+      { urls: 'stun:stun.relay.metered.ca:80' },
+      { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:global.relay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ]
+  };
+
   function startPeer(roomCode) {
     if (typeof Peer === 'undefined') return;
 
@@ -741,7 +752,8 @@
     document.getElementById('sp-no-game-title').textContent = 'Connecting…';
     document.getElementById('sp-no-game-msg').textContent   = "Reaching the scorer's device. This takes a few seconds.";
 
-    const guest = new Peer();
+    const guest = new Peer(undefined, { config: PEER_ICE_CONFIG });
+    let connected = false;
 
     function connectToHost() {
       const conn = guest.connect('pw-' + roomCode.toLowerCase(), { reliable: true });
@@ -753,6 +765,7 @@
 
       conn.on('open', () => {
         clearTimeout(timeout);
+        connected = true;
         document.getElementById('sp-no-game-title').textContent = 'Waiting for game…';
         document.getElementById('sp-no-game-msg').textContent   = 'Connected! Scoreboard will appear as soon as the scorer logs a play.';
       });
@@ -767,12 +780,20 @@
         }
       });
 
-      conn.on('close',   () => { clearTimeout(timeout); setTimeout(connectToHost, 4000); });
-      conn.on('error',   () => { clearTimeout(timeout); setTimeout(connectToHost, 4000); });
+      conn.on('close', () => { connected = false; clearTimeout(timeout); setTimeout(connectToHost, 4000); });
+      conn.on('error', () => { connected = false; clearTimeout(timeout); setTimeout(connectToHost, 4000); });
     }
 
-    guest.on('open',  () => connectToHost());
-    guest.on('error', ()  => setTimeout(() => guest.reconnect && guest.reconnect(), 5000));
+    guest.on('open', () => { if (!connected) connectToHost(); });
+    guest.on('disconnected', () => { try { guest.reconnect(); } catch (_) {} });
+    guest.on('error', () => setTimeout(() => { try { guest.reconnect(); } catch (_) {} }, 5000));
+
+    // Screen lock / app switch drops the signaling socket on mobile — reconnect on return.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !connected && guest.disconnected && !guest.destroyed) {
+        try { guest.reconnect(); } catch (_) {}
+      }
+    });
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────────

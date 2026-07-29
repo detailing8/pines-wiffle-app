@@ -328,6 +328,17 @@
   if (!/^\d{4}$/.test(roomCode)) roomCode = genRoomCode();
   localStorage.setItem('pines-room-code', roomCode);
 
+  // Public TURN relay (Open Relay Project) on port 443, so the connection
+  // still works on cellular/locked-down networks that block plain UDP.
+  const PEER_ICE_CONFIG = {
+    iceServers: [
+      { urls: 'stun:stun.relay.metered.ca:80' },
+      { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:global.relay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ]
+  };
+
   let hostPeer   = null;
   let guestConns = [];
 
@@ -335,7 +346,7 @@
     if (typeof Peer === 'undefined') return;
     if (hostPeer && !hostPeer.destroyed) return;
 
-    hostPeer = new Peer('pw-' + roomCode.toLowerCase());
+    hostPeer = new Peer('pw-' + roomCode.toLowerCase(), { config: PEER_ICE_CONFIG });
 
     hostPeer.on('open', () => {
       const ind = document.getElementById('live-indicator');
@@ -367,6 +378,13 @@
       try { hostPeer.reconnect(); } catch (_) {}
     });
   }
+
+  // Screen lock / app switch drops the signaling socket on mobile — reconnect on return.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && hostPeer && hostPeer.disconnected && !hostPeer.destroyed) {
+      try { hostPeer.reconnect(); } catch (_) {}
+    }
+  });
 
   function broadcastToPeers() {
     guestConns = guestConns.filter(c => c.open);

@@ -466,11 +466,11 @@
     <h2 id="sp-no-game-title">No active game</h2>
     <p id="sp-no-game-msg">Open the Pines Wiffle scorer app and start a game. This page will update automatically.</p>
     <form id="sp-room-form" class="sp-room-form">
-      <input id="sp-room-input" class="sp-room-input" type="text" inputmode="text" maxlength="6"
-             placeholder="ROOM CODE" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+      <input id="sp-room-input" class="sp-room-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+             placeholder="0000" autocomplete="off" autocorrect="off" spellcheck="false">
       <button type="submit" class="sp-room-btn">Watch</button>
     </form>
-    <p id="sp-room-error" class="sp-room-error hidden">Enter the 6-character code from the scorer's app.</p>
+    <p id="sp-room-error" class="sp-room-error hidden">Enter the 4-digit code from the scorer's app.</p>
   </div>
 
   <!-- Game content -->
@@ -784,13 +784,13 @@
   }
 
   el('sp-room-input').addEventListener('input', e => {
-    e.target.value = e.target.value.toUpperCase();
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
   });
 
   el('sp-room-form').addEventListener('submit', e => {
     e.preventDefault();
-    const code = el('sp-room-input').value.trim().toUpperCase();
-    if (!code) {
+    const code = el('sp-room-input').value.trim();
+    if (!/^\d{4}$/.test(code)) {
       el('sp-room-error').classList.remove('hidden');
       return;
     }

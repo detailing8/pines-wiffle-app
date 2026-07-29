@@ -321,11 +321,11 @@
   // ─── PEER-TO-PEER LIVE (PeerJS) ───────────────────────────────────────────────
 
   function genRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars
-    return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    return String(Math.floor(Math.random() * 10000)).padStart(4, '0');
   }
 
   let roomCode = localStorage.getItem('pines-room-code') || genRoomCode();
+  if (!/^\d{4}$/.test(roomCode)) roomCode = genRoomCode();
   localStorage.setItem('pines-room-code', roomCode);
 
   let hostPeer   = null;

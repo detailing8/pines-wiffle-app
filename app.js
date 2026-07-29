@@ -338,7 +338,9 @@
     hostPeer = new Peer('pw-' + roomCode.toLowerCase());
 
     hostPeer.on('open', () => {
-      document.getElementById('live-indicator').classList.remove('hidden');
+      const ind = document.getElementById('live-indicator');
+      ind.innerHTML = '&#9679; LIVE &middot; <span class="live-code">' + roomCode + '</span>';
+      ind.classList.remove('hidden');
     });
 
     hostPeer.on('connection', conn => {

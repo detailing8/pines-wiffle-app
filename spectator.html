@@ -413,6 +413,39 @@
     .sp-no-game h2 { font-size: 18px; font-weight: 800; color: var(--text-2); }
     .sp-no-game p  { font-size: 13px; line-height: 1.5; }
 
+    .sp-room-form {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .sp-room-input {
+      width: 150px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-lt);
+      background: var(--surface2);
+      color: var(--text);
+      font: inherit;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .sp-room-input::placeholder { color: var(--text-3); letter-spacing: 1px; font-weight: 700; }
+    .sp-room-input:focus { outline: none; border-color: var(--blue); }
+    .sp-room-btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .sp-room-btn:active { background: var(--blue-lt); }
+    .sp-room-error { color: var(--red); font-size: 12px; }
+
     .hidden { display: none !important; }
   </style>
 </head>
@@ -432,6 +465,12 @@
     <div class="sp-no-game-icon">⚾</div>
     <h2 id="sp-no-game-title">No active game</h2>
     <p id="sp-no-game-msg">Open the Pines Wiffle scorer app and start a game. This page will update automatically.</p>
+    <form id="sp-room-form" class="sp-room-form">
+      <input id="sp-room-input" class="sp-room-input" type="text" inputmode="text" maxlength="6"
+             placeholder="ROOM CODE" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button type="submit" class="sp-room-btn">Watch</button>
+    </form>
+    <p id="sp-room-error" class="sp-room-error hidden">Enter the 6-character code from the scorer's app.</p>
   </div>
 
   <!-- Game content -->
@@ -697,6 +736,8 @@
   function startPeer(roomCode) {
     if (typeof Peer === 'undefined') return;
 
+    el('sp-room-form').classList.add('hidden');
+    el('sp-room-error').classList.add('hidden');
     document.getElementById('sp-no-game-title').textContent = 'Connecting…';
     document.getElementById('sp-no-game-msg').textContent   = "Reaching the scorer's device. This takes a few seconds.";
 
@@ -741,6 +782,23 @@
   if (roomCode) {
     startPeer(roomCode);
   }
+
+  el('sp-room-input').addEventListener('input', e => {
+    e.target.value = e.target.value.toUpperCase();
+  });
+
+  el('sp-room-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const code = el('sp-room-input').value.trim().toUpperCase();
+    if (!code) {
+      el('sp-room-error').classList.remove('hidden');
+      return;
+    }
+    const url = new URL(location.href);
+    url.searchParams.set('room', code);
+    history.replaceState(null, '', url);
+    startPeer(code);
+  });
 
   // Always also load from localStorage + BroadcastChannel (same-device fallback)
   state = readStorage();
